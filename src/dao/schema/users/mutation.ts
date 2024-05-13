@@ -14,7 +14,7 @@ export const createUserDao = async (user: CreateUser) => {
   return row[0]
 }
 
-export const createOtpDao = async (otp: CreateOtp) => {
+export const createOtpDao = async (otp: CreateOtp): Promise<void> => {
   await db.insert(otpTable).values(otp)
 }
 

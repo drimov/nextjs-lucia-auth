@@ -25,40 +25,50 @@ import { lucia } from "../auth/auth"
 import { redirect } from "next/navigation"
 import { sendEmail } from "../email/send-email"
 
-export const signInAction = async (
-  prevState: string | undefined,
-  formData: FormData
-) => {
+function validateEmail(formData: FormData): string | ZodError {
   const validateField = userEmailSchema.safeParse({
     email: formData.get("email"),
   })
 
   if (!validateField.success) {
-    return validateField.error.flatten().fieldErrors?.email?.[0]
+    return validateField.error
   }
 
-  const emailLowerCase = validateField.data.email.toLowerCase()
-  const request = await getUserByEmailDao(emailLowerCase)
+  return validateField.data.email.toLowerCase()
+}
 
-  if (!request) {
-    return "Aucun compte n'est associé à cet e-mail." as const
+export const signInAction = async (
+  prevState: string | undefined,
+  formData: FormData
+) => {
+  const emailOrError = validateEmail(formData)
+
+  if (emailOrError instanceof ZodError) {
+    return emailOrError.flatten().fieldErrors?.email?.[0]
   }
-  const otp = generateOtp(request.id)
+
   try {
+    const user = await getUserByEmailDao(emailOrError)
+
+    if (!user) {
+      return "Aucun compte n'est associé à cet e-mail." as const
+    }
+
+    const otp = generateOtp(user.id)
     await createOtpDao(otp)
+    await sendEmail({
+      to: user.email,
+      subject: "Connexion",
+      react: MagicLinkMail({ code: otp.code }),
+    })
   } catch (error) {
     console.error(error)
-    return `Une erreur interne est survenue.` as const
+    if (error instanceof Error) {
+      return `Une erreur interne est survenue: ${error.message}` as const
+    }
+    return `Une erreur interne est survenue: ${error}` as const
   }
 
-  const result = await sendEmail({
-    to: request.email,
-    subject: "Connexion",
-    react: MagicLinkMail({ code: otp.code }),
-  })
-  if (result.error) {
-    return `Erreur lors de l'envoi de l'email: ${result.error.message}` as const
-  }
   redirect("/otp-validation")
 }
 
@@ -76,30 +86,22 @@ export const signUpAction = async (data: CreateUserWithoutId) => {
     const otp = generateOtp(userId)
     await createOtpDao(otp)
 
-    const result = await sendEmail({
+    await sendEmail({
       to: data.email,
       subject: "Connexion",
       react: MagicLinkMail({ code: otp.code }),
     })
-    if (result.error) {
-      return {
-        error:
-          `Erreur lors de l'envoi de l'email: ${result.error.message}` as const,
-      }
-    }
+
     return {
       success: "Un email de connexion vous a été envoyé.",
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.log("classic error")
       return {
         error: error.message,
       }
     }
     if (error instanceof ZodError) {
-      console.log("ZodError")
-
       return {
         error: error.issues[0].message,
       }

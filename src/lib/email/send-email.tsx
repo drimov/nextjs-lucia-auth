@@ -24,5 +24,11 @@ export const sendEmail = async (
     params[1],
   ] satisfies ResendParamsType
 
-  return resend.emails.send(...resendParams)
+  const result = await resend.emails.send(...resendParams)
+
+  if (result.error) {
+    throw new Error(
+      `Erreur lors de l'envoi de l'email: ${result.error.message}`
+    )
+  }
 }

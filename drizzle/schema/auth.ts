@@ -37,6 +37,7 @@ export const otpTable = pgTable("otp", {
 
 // USERS
 export const insertUserSchema = createInsertSchema(userTable)
+export const selectUserSchema = createSelectSchema(userTable)
 
 export const userEmailSchema = insertUserSchema
   .pick({
@@ -77,7 +78,7 @@ export const createUserSchema = insertUserSchema
   })
 
 export const createUserWithoutIdSchema = createUserSchema.omit({ id: true })
-
+export type User = z.infer<typeof selectUserSchema>
 export type UserEmail = z.infer<typeof userEmailSchema>
 export type CreateUser = z.infer<typeof insertUserSchema>
 export type CreateUserWithoutId = z.infer<typeof createUserWithoutIdSchema>

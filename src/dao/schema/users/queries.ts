@@ -1,8 +1,11 @@
+import { User, userTable } from "~drizzle/schema/auth"
+
 import db from "~drizzle/index"
 import { eq } from "drizzle-orm"
-import { userTable } from "~drizzle/schema/auth"
 
-export const getUserByEmailDao = async (email: string) => {
+export const getUserByEmailDao = async (
+  email: string
+): Promise<User | undefined> => {
   const row = await db.query.userTable.findFirst({
     where: eq(userTable.email, email),
   })

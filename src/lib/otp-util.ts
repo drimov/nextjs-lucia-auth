@@ -18,9 +18,9 @@ function generateTOTP(secret: Buffer, digits = 6): string {
   const buf = Buffer.alloc(8)
   buf.writeUInt32BE(counter, 0)
   mac.update(buf)
-  const HS = mac.digest()
-  const offset = HS[19] & 0x0f
-  const Snum = HS.readUInt32BE(offset) & 0x7f_ff_ff_ff
+  const hmacDigest = mac.digest()
+  const offset = hmacDigest[19] & 0x0f
+  const Snum = hmacDigest.readUInt32BE(offset) & 0x7f_ff_ff_ff
   const D = Snum % Math.pow(10, digits)
   // Pad "0" to make it 6 digits.
   return D.toString().padStart(digits, "0")
